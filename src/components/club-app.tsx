@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, BookOpen, CalendarDays, Check, ChevronRight, ClipboardList, Clock3, Download, LogOut, RefreshCw, Settings2, ShieldCheck, Sparkles, X } from "lucide-react";
+import { ArrowRight, ArrowUpRight, BookOpen, CalendarDays, Check, ChevronRight, ClipboardList, Clock3, Download, LogOut, Moon, RefreshCw, Settings2, ShieldCheck, Sparkles, Sun, X } from "lucide-react";
 import { ClubProvider, useClub } from "./club-provider";
 import { AuthPanel } from "./auth-panel";
 import { BookingDialog, type BookingSelection } from "./booking-dialog";
@@ -13,6 +13,25 @@ import { demoMode } from "@/lib/supabase/browser";
 
 type Tab = "calendar" | "bookings" | "agenda" | "admin" | "guide";
 type InstallPrompt = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: "accepted" | "dismissed" }> };
+const THEME_KEY = "boulevard-theme";
+const THEME_EVENT = "boulevard-theme-change";
+type Theme = "day" | "night";
+function currentTheme(): Theme {
+  return localStorage.getItem(THEME_KEY) === "night" ? "night" : "day";
+}
+function subscribeToTheme(onChange: () => void) {
+  window.addEventListener(THEME_EVENT, onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    window.removeEventListener(THEME_EVENT, onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+function updateTheme(theme: Theme) {
+  localStorage.setItem(THEME_KEY, theme);
+  document.documentElement.dataset.theme = theme;
+  window.dispatchEvent(new Event(THEME_EVENT));
+}
 export function ClubApp({ setupRequested, authError }: { setupRequested: boolean; authError: boolean }) {
   return <ClubProvider><ClubShell setupRequested={setupRequested} authError={authError} /></ClubProvider>;
 }
@@ -25,7 +44,10 @@ function ClubShell({ setupRequested, authError }: { setupRequested: boolean; aut
   const [setup, setSetup] = useState(setupRequested);
   const [install, setInstall] = useState<InstallPrompt | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const theme = useSyncExternalStore(subscribeToTheme, currentTheme, () => "day");
+  const nightMode = theme === "night";
   useEffect(() => {
+    document.documentElement.dataset.theme = currentTheme();
     const interval = window.setInterval(() => setNow(Date.now()), 30_000);
     const onInstall = (event: Event) => {
       event.preventDefault();
@@ -37,6 +59,9 @@ function ClubShell({ setupRequested, authError }: { setupRequested: boolean; aut
     }
     return () => { window.clearInterval(interval); window.removeEventListener("beforeinstallprompt", onInstall); };
   }, []);
+  function toggleTheme() {
+    updateTheme(nightMode ? "day" : "night");
+  }
   async function attempt(action: () => Promise<void>) {
     setLocalError("");
     try { await action(); }
@@ -70,6 +95,7 @@ function ClubShell({ setupRequested, authError }: { setupRequested: boolean; aut
     <div className="main-wrap">
       <header className="topbar"><span className="topbar-title">The good times start here.</span><Link className="mobile-brand" href="/" aria-label="The Boulevard Club home"><img src="/brand/wordmark.svg" alt="The Boulevard Club" width={110} height={62} /></Link>{/* eslint-disable-line @next/next/no-img-element */}
         <div className="topbar-right"><span className="connection"><i className={`status-dot ${connected || demoMode ? "" : "disconnected"}`} />{demoMode ? "Demo preview" : connected ? "Live calendar" : "Connecting"}</span>
+          <button className="icon-button" aria-label={nightMode ? "Switch to day mode" : "Switch to night mode"} aria-pressed={nightMode} onClick={toggleTheme}>{nightMode ? <Sun size={17} /> : <Moon size={17} />}</button>
           <button className="icon-button" aria-label="Refresh calendar" onClick={() => attempt(refresh)}><RefreshCw size={17} /></button><span className="avatar mobile-avatar">{user.full_name[0]}</span></div>
       </header>
       {demoMode && <div className="demo-banner"><span><strong>Demo</strong> Sample data only. Nothing reserves a real court.</span><div><label>Preview as <select aria-label="Demo role" value={user.id} onChange={(e) => { switchDemoUser(e.target.value); setSelection(null); }}>
@@ -83,7 +109,7 @@ function ClubShell({ setupRequested, authError }: { setupRequested: boolean; aut
             <div className="welcome-art"><span className="art-label">LESS SCROLLING.<br />MORE PLAYING.</span><CourtIllustration /><div className="art-bottom"><span>THE BOULEVARD<br />WAY OF LIFE</span><span className="art-star">✳</span></div></div>
           </section>
           <div className="quick-facts">
-            <button className="fact next-booking" onClick={() => next ? select({ booking: next, facilityId: next.facility_id, start: next.start_time }) : setTab("bookings")}><span className="fact-icon"><CalendarDays size={19} /></span><div><span className="eyebrow">YOUR NEXT GAME</span><strong>{next ? data.facilities.find((f) => f.id === next.facility_id)?.name : "Something to look forward to"}</strong><small>{next ? `${formatDate(next.start_time)} · ${formatTime(next.start_time)}` : "Your next booking will appear here"}</small></div><ChevronRight size={17} /></button>
+            <button className={`fact next-booking${next ? " has-booking" : ""}`} onClick={() => next ? select({ booking: next, facilityId: next.facility_id, start: next.start_time }) : setTab("bookings")}><span className="fact-icon"><CalendarDays size={19} /></span><div><span className="eyebrow">YOUR NEXT GAME</span><strong>{next ? data.facilities.find((f) => f.id === next.facility_id)?.name : "Something to look forward to"}</strong><small>{next ? `${formatDate(next.start_time)} · ${formatTime(next.start_time)}` : "Your next booking will appear here"}</small></div><ChevronRight size={17} /></button>
             <div className="fact"><span className="fact-icon"><Clock3 size={19} /></span><div><span className="eyebrow">OPEN FOR GOOD TIMES</span><strong>8:30 am – 11:30 pm</strong><small>Every day · Pakistan time</small></div></div>
             <div className="fact"><span className="fact-icon"><Sparkles size={19} /></span><div><span className="eyebrow">THE GOLDEN HOURS</span><strong>5:30 pm – 10:00 pm</strong><small>One premium slot per day</small></div></div>
           </div>
@@ -102,7 +128,7 @@ function ClubShell({ setupRequested, authError }: { setupRequested: boolean; aut
           <p className="guide-intro">A private club, shared by family. These small courtesies keep it fair, welcoming, and easy for everyone.</p>
           <div className="rules-grid">{[
             ["01", "A little time to play.", "Every session is 90 minutes. Our day runs from 8:30 am to 11:30 pm, in fixed slots, on every court and the football field."],
-            ["02", "Plan a little ahead.", "Book or reschedule from 2 to 72 hours before your session starts. The window rolls forward in real time, not at midnight."],
+            ["02", "Plan a little ahead.", "Book or reschedule from 1 to 72 hours before your session starts. The window rolls forward in real time, not at midnight."],
             ["03", "Share the golden hours.", "Premium sessions are 5:30–7 pm, 7–8:30 pm, and 8:30–10 pm. One premium booking total per responsible member per Pakistan calendar day, across all facilities."],
             ["04", "Be there. Be part of it.", "Book in your own name, play yourself, and attend the entire session. Guests are welcome only with you. Courts cannot be offered to other people."],
             ["05", "Plans change. Let us know.", "Cancel or edit at least 2 hours before play. After that, contact Ghulam Rasool or an admin. Cancelling releases the slot and restores your premium allowance immediately."],

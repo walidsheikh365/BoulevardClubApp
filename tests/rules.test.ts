@@ -17,10 +17,10 @@ const booking = (overrides: Partial<Booking> = {}): Booking => ({
   ...input(), id: "booking-1", created_by: user.id, end_time: endTime(input().start_time),
   status: "confirmed", created_at: now.toISOString(), updated_at: now.toISOString(), ...overrides
 });
-describe("rolling 2–72 hour booking window", () => {
+describe("rolling 1–72 hour booking window", () => {
   it.each([
-    [-1, false], [0, false], [2 * 3_600_000 - 1, false], [2 * 3_600_000, true],
-    [2 * 3_600_000 + 1, true], [72 * 3_600_000 - 1, true], [72 * 3_600_000, true], [72 * 3_600_000 + 1, false]
+    [-1, false], [0, false], [3_600_000 - 1, false], [3_600_000, true],
+    [3_600_000 + 1, true], [72 * 3_600_000 - 1, true], [72 * 3_600_000, true], [72 * 3_600_000 + 1, false]
   ])("enforces the exact boundary at offset %i ms", (offset, allowed) => {
     expect(windowReason(new Date(now.getTime() + offset).toISOString(), now) === null).toBe(allowed);
   });
@@ -109,7 +109,7 @@ describe("changes and schedule", () => {
   });
   it("does not let staff change completed bookings or create short-notice bookings", () => {
     expect(changeReason(booking({ end_time: now.toISOString() }), data().profiles[1], now)).toMatch(/Completed/);
-    expect(validateBooking(input({ start_time: slotTime("2026-10-03", 780) }), data(), data().profiles[1], now)).toMatch(/2 hours/);
+    expect(validateBooking(input({ start_time: slotTime("2026-10-03", 690) }), data(), data().profiles[1], now)).toMatch(/1 hour/);
   });
   it("produces a complete, sorted guard summary in club time", () => {
     const summary = scheduleText(createDemoData(now), "2026-10-03");

@@ -97,7 +97,7 @@ export function BookingDialog({ selection, onClose }: { selection: BookingSelect
             </option>)}
           </select></label>
         </div>
-        <p className="field-hint">Book 2–72 hours before the start. Premium: 5:30–10 pm.</p>
+        <p className="field-hint">Book 1–72 hours before the start. Premium: 5:30–10 pm.</p>
         {isStaff(user) ? <label>Responsible family member<select value={responsible} onChange={(e) => setResponsible(e.target.value)}>
           {data.profiles.filter((p) => p.is_active).map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
         </select></label> : <div className="responsible"><ShieldCheck size={19} /><span>Booked in your name<strong>{user.full_name}</strong></span></div>}

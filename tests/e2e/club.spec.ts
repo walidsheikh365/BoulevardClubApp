@@ -15,8 +15,8 @@ test("responsive calendar, real logo and installation metadata", async ({ page, 
   await expect(page.locator(".facility-tile")).toHaveCount(3);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
   expect(overflow).toBe(false);
-  await expect(page.locator(".slot").nth(3)).toBeDisabled();
-  await expect(page.locator(".slot").nth(4)).toBeEnabled();
+  await expect(page.locator(".slot").nth(2)).toBeDisabled();
+  await expect(page.locator(".slot").nth(3)).toBeEnabled();
   const manifest = await request.get("/manifest.webmanifest");
   expect(manifest.ok()).toBe(true);
   expect(await manifest.json()).toMatchObject({ name: "The Boulevard Club", display: "standalone" });
@@ -24,6 +24,24 @@ test("responsive calendar, real logo and installation metadata", async ({ page, 
   expect(await svg.text()).toContain("<path");
   expect(await svg.text()).not.toContain("<text");
   await page.screenshot({ path: testInfo.outputPath("calendar.png"), fullPage: true });
+});
+test("highlights the next booking and remembers the night mode", async ({ page }) => {
+  await expect(page.locator(".next-booking")).toHaveClass(/has-booking/);
+  await expect(page.locator(".next-booking")).toHaveCSS("background-color", "rgb(216, 221, 211)");
+  await page.getByRole("button", { name: "Switch to night mode" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "night");
+  await expect(page.locator("body")).toHaveCSS("background-color", "rgb(40, 35, 47)");
+  await expect(page.locator(".tiny-star")).toHaveCSS("color", "rgb(217, 156, 131)");
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "night");
+  await page.getByRole("button", { name: "Switch to day mode" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "day");
+});
+test("keeps the booking summary in the initial mobile view", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  const factsBottom = await page.locator(".quick-facts").evaluate((element) => element.getBoundingClientRect().bottom);
+  expect(factsBottom).toBeLessThanOrEqual(667);
+  await expect(page.locator(".next-booking")).toBeInViewport();
 });
 test("public demo rejects real invitations at the server", async ({ page, request }) => {
   const response = await request.post("/api/invitations", {

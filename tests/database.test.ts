@@ -46,6 +46,7 @@ beforeAll(async () => {
     create publication supabase_realtime;
   `);
   await db.exec(await readFile(new URL("../supabase/migrations/001_club.sql", import.meta.url), "utf8"));
+  await db.exec(await readFile(new URL("../supabase/migrations/002_one_hour_booking_notice.sql", import.meta.url), "utf8"));
   for (const [name, id] of Object.entries(ids).filter(([key]) => !["court", "otherCourt"].includes(key))) {
     await db.query("insert into auth.users(id,email,invited_at,raw_user_meta_data) values ($1,$2,$3,$4)",
       [id, `${name}@example.com`, name === "outsider" ? null : new Date().toISOString(), JSON.stringify({ full_name: name })]);
@@ -69,15 +70,15 @@ describe("actual PostgreSQL migration and booking RPCs", () => {
     expect((await db.query("select * from public.audit_logs")).rows).toHaveLength(1);
     await expect(db.exec("delete from public.audit_logs")).rejects.toThrow(/permission denied/);
   });
-  it("rejects windows below 2 and above 72 hours for members AND admins", async () => {
+  it("rejects windows below 1 and above 72 hours for members AND admins", async () => {
     for (const actor of [ids.alice, ids.admin]) {
       await asUser(actor);
-      await expect(save({ start: new Date(Date.now() + 3_600_000).toISOString() })).rejects.toThrow(/between 2 and 72/);
-      await expect(save({ start: new Date(Date.now() + 73 * 3_600_000).toISOString() })).rejects.toThrow(/between 2 and 72/);
+      await expect(save({ start: new Date(Date.now() + 3_600_000 - 1).toISOString() })).rejects.toThrow(/between 1 and 72/);
+      await expect(save({ start: new Date(Date.now() + 73 * 3_600_000).toISOString() })).rejects.toThrow(/between 1 and 72/);
     }
   });
   it("accepts the exact inclusive window endpoints before applying the independent slot-grid rule", async () => {
-    for (const hours of [2, 72]) {
+    for (const hours of [1, 72]) {
       // An arbitrary transaction start is off-grid; reaching that error proves the endpoint passed the window check.
       await db.exec(`do $$
         begin
@@ -87,8 +88,8 @@ describe("actual PostgreSQL migration and booking RPCs", () => {
         end;
       $$;`);
     }
-    for (const interval of ["2 hours - 1 millisecond", "72 hours 1 millisecond"]) {
-      await expect(db.exec(`select public.save_booking(null, '${ids.court}', '${ids.alice}', now() + interval '${interval}', '', '{}', true)`)).rejects.toThrow(/between 2 and 72/);
+    for (const interval of ["1 hour - 1 millisecond", "72 hours 1 millisecond"]) {
+      await expect(db.exec(`select public.save_booking(null, '${ids.court}', '${ids.alice}', now() + interval '${interval}', '', '{}', true)`)).rejects.toThrow(/between 1 and 72/);
     }
   });
   it.each([510, 600, 690, 780, 870, 960, 1050, 1140, 1230, 1320])("accepts scheduled start minute %i", async (minute) => {

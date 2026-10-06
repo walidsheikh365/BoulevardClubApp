@@ -94,7 +94,7 @@ export function Calendar({ date, setDate, onSelect, now }: { date: string; setDa
           </button>;
         })}
       </div>}
-      <div className="calendar-footnote"><Clock3 size={15} /><span>Reservations open 72 hours ahead and close 2 hours before play.</span></div>
+      <div className="calendar-footnote"><Clock3 size={15} /><span>Reservations open 72 hours ahead and close 1 hour before play.</span></div>
     </div>}
   </section>;
 }

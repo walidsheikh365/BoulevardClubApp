@@ -46,12 +46,12 @@ Do not treat demo bookings as reservations. Demo storage is not multi-user or co
 - Time zone: **Asia/Karachi (UTC+5)**, independent of the member's device location.
 - Open daily **8:30 am–11:30 pm**, ten fixed **90-minute** sessions:
   8:30, 10:00, 11:30 am; 1:00, 2:30, 4:00, 5:30, 7:00, 8:30, 10:00 pm.
-- New bookings and reschedules must start **2–72 hours from now, inclusive**. This is a rolling window, not three calendar days.
+- New bookings and reschedules must start **1–72 hours from now, inclusive**. This is a rolling window, not three calendar days.
 - Premium sessions: **5:30–7 pm, 7–8:30 pm, 8:30–10 pm**.
 - **One premium booking total per responsible member per Pakistan day across all facilities**.
 - Members book in their own name and acknowledge that they will play and remain present for the whole session. Guests cannot use the facilities independently; bookings cannot be offered to others.
 - The manager/admin can book on behalf of a named attending member. The daily premium allowance is charged to that member, not the staff account.
-- Members can edit/cancel until **2 hours before play, inclusive**. Within two hours, the manager/admin handles changes. Reschedules still require a new start in the 2–72-hour window.
+- Members can edit/cancel until **2 hours before play, inclusive**. Within two hours, the manager/admin handles changes. Reschedules still require a new start in the 1–72-hour window.
 - Staff may cancel an ongoing session, but completed/cancelled sessions cannot be edited. Staff do not bypass booking windows, premium limits, maintenance, or inactive facilities.
 - Successful cancellation immediately releases the slot and restores the premium allowance.
 - Account/facility deactivation requires cancelling upcoming affected bookings first. Maintenance cannot silently displace existing bookings.
@@ -61,6 +61,7 @@ These confirmed choices replace the older brief's variable duration, seven-day w
 ## Screens and roles
 
 - **Family:** day/week/month calendar, facility selector, booking, participating-family tags, guest notes, reschedule, cancellation, upcoming/history, and club rules.
+- The home screen highlights an upcoming booking, keeps key court hours visible on mobile, and offers a saved night mode with a deep-purple and clay palette.
 - **Manager:** member capabilities plus booking on behalf of members, cross-member changes, chronological agenda, native share/copy and printable guard schedule for Ameen Khan and Nawab Khan.
 - **Admin:** manager capabilities plus email invitations, member role/access controls, facility activation, maintenance blocks, and latest 100 audit entries.
 - Guards have no login. No payments, chat, public registration, automatic WhatsApp messages, email booking notifications, or push notifications.
@@ -71,7 +72,7 @@ These confirmed choices replace the older brief's variable duration, seven-day w
 No cloud database, credentials, email provider, or deployment is provisioned by this source code.
 
 1. Create a Supabase project.
-2. Run [001_club.sql](supabase/migrations/001_club.sql) in its SQL editor, or link the Supabase CLI and apply the migration with `supabase db push`.
+2. Run [001_club.sql](supabase/migrations/001_club.sql) followed by [002_one_hour_booking_notice.sql](supabase/migrations/002_one_hour_booking_notice.sql) in its SQL editor. On an existing project, apply only migration 002; with the Supabase CLI, use `supabase db push`.
 3. In **Authentication → Settings**, **disable new user signups**. The local [config](supabase/config.toml) does this for the Supabase local stack, but does not configure a hosted project automatically.
 4. Set the Site URL to your deployed HTTPS origin and allow that origin's `/auth/confirm` URL. Add `http://localhost:3000/auth/confirm` for local development only.
 5. Configure production SMTP. Supabase's default email sender has testing restrictions and rate limits. Invitations must be able to reach your family members.
@@ -121,7 +122,7 @@ Uninvited Auth users do not automatically receive a club profile. RLS denies the
 
 ## Booking integrity
 
-[Database migration](supabase/migrations/001_club.sql) enforces rules inside authenticated, permission-checked RPCs. Callers cannot submit a forged `created_by`; it is taken from `auth.uid()`.
+[Database migrations](supabase/migrations/001_club.sql) and [002_one_hour_booking_notice.sql](supabase/migrations/002_one_hour_booking_notice.sql) enforce rules inside authenticated, permission-checked RPCs. Callers cannot submit a forged `created_by`; it is taken from `auth.uid()`.
 
 - Fixed start-grid and duration constraints mean overlapping valid sessions necessarily share a start.
 - A partial unique `(facility_id, start_time)` index prevents duplicate confirmed slots.

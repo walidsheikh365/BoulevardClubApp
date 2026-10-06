@@ -2,7 +2,7 @@ import type { Booking, BookingInput, ClubData, Profile } from "./types";
 
 export const CLUB_TIMEZONE = "Asia/Karachi";
 export const SLOT_MINUTES = 90;
-export const MIN_ADVANCE_HOURS = 2;
+export const MIN_ADVANCE_HOURS = 1;
 export const MAX_ADVANCE_HOURS = 72;
 export const CANCELLATION_HOURS = 2;
 export const OPEN_MINUTE = 8 * 60 + 30;
@@ -50,7 +50,7 @@ export const overlaps = (a: string, b: string, c: string, d: string) =>
 export function windowReason(start: string, now = new Date()): string | null {
   const diff = new Date(start).getTime() - now.getTime();
   if (!Number.isFinite(diff)) return "Choose a valid start time.";
-  if (diff < MIN_ADVANCE_HOURS * HOUR) return "Bookings need at least 2 hours' notice.";
+  if (diff < MIN_ADVANCE_HOURS * HOUR) return "Bookings need at least 1 hour's notice.";
   if (diff > MAX_ADVANCE_HOURS * HOUR) return "This slot opens for booking 72 hours before it starts.";
   return null;
 }
